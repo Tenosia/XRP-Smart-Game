@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+
+# Secrets & local state
+backend/.env
+backend/.hotwallet.json
+backend/predixo.db
+backend/predixo.db-shm
+backend/predixo.db-wal
+.DS_Store

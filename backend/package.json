@@ -1,0 +1,26 @@
+{
+  "name": "predixo-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Predixo — Stellar-powered prediction market backend",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "start:mainnet": "STELLAR_NETWORK=public HORIZON_URL=https://horizon.stellar.org node src/index.js",
+    "start:testnet": "STELLAR_NETWORK=testnet HORIZON_URL=https://horizon-testnet.stellar.org node src/index.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "stellar-sdk": "^12.3.0",
+    "zod": "^3.23.8"
+  }
+}

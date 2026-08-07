@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-ink-950 text-slate-200 font-sans antialiased;
+    /* Fiery casino ambiance: warm radial glows on a near-black base */
+    background-image:
+      radial-gradient(55rem 42rem at 100% -5%, rgba(255, 106, 26, 0.18), transparent 55%),
+      radial-gradient(45rem 45rem at -5% 105%, rgba(255, 59, 48, 0.14), transparent 55%),
+      radial-gradient(40rem 36rem at 50% -10%, rgba(255, 140, 60, 0.08), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight text-white;
+  }
+  ::selection {
+    @apply bg-brand-500/40 text-white;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-white/20; }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/[0.035] border border-white/[0.07] backdrop-blur-xl;
+  }
+  .glass-strong {
+    @apply bg-white/[0.06] border border-white/10 backdrop-blur-2xl;
+  }
+  .card {
+    @apply rounded-2xl border border-white/[0.07] bg-ink-850/70 shadow-card backdrop-blur-xl;
+  }
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #ff8a1a 0%, #ff3b30 55%, #e51d12 100%);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50
+           disabled:opacity-50 disabled:cursor-not-allowed select-none;
+  }
+  /* Vivid red CTA, like the casino "Deposit" button */
+  .btn-primary {
+    @apply btn text-white hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0;
+    background-image: linear-gradient(180deg, #ff4f43 0%, #ec1a10 100%);
+    box-shadow: 0 0 40px -8px rgba(255, 59, 48, 0.55);
+  }
+  .btn-ember {
+    @apply btn text-white shadow-glow-ember hover:brightness-110 hover:-translate-y-0.5;
+    background-image: linear-gradient(180deg, #ffa033 0%, #f56b0a 100%);
+  }
+  .btn-ghost {
+    @apply btn bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10;
+  }
+  .btn-yes {
+    @apply btn bg-yes/15 text-yes border border-yes/30 hover:bg-yes/25;
+  }
+  .btn-no {
+    @apply btn bg-no/15 text-no border border-no/30 hover:bg-no/25;
+  }
+  .input {
+    @apply w-full rounded-xl bg-ink-900/80 border border-white/10 px-4 py-2.5 text-sm text-white
+           placeholder-slate-500 outline-none transition
+           focus:border-brand-400/60 focus:ring-2 focus:ring-brand-500/20;
+  }
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
+  }
+  .badge-open { @apply chip bg-yes/15 text-yes; }
+  .badge-closed { @apply chip bg-ember-400/15 text-ember-300; }
+  .badge-resolved { @apply chip bg-brand-500/15 text-brand-300; }
+  .badge-pending { @apply chip bg-white/10 text-slate-300; }
+  .badge-rejected { @apply chip bg-no/15 text-no; }
+  .badge-refunded { @apply chip bg-cyanx/15 text-cyanx; }
+
+  /* Casino sidebar items */
+  .nav-item {
+    @apply flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400
+           transition hover:bg-white/[0.06] hover:text-white;
+  }
+  .nav-item-active {
+    @apply text-white;
+    background-image: linear-gradient(180deg, #ff4f43 0%, #ec1a10 100%);
+    box-shadow: 0 0 40px -8px rgba(255, 59, 48, 0.55);
+  }
+  /* Balance / deposit pill */
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-xl border border-white/10 bg-ink-900/80 px-2 py-1.5;
+  }
+}
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Time-urgency borders for idea cards */
+/* RED — time-sensitive: a continuously expanding ring + pulsing glow */
+.urgency-red {
+  position: relative;
+  border-color: rgba(255, 90, 90, 0.9) !important;
+  animation: urgentGlow 1.2s ease-in-out infinite;
+}
+.urgency-red::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 1rem;
+  border: 2px solid rgba(255, 59, 48, 0.75);
+  animation: urgentExpand 1.5s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes urgentExpand {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  100% { transform: scale(1.07); opacity: 0; }
+}
+@keyframes urgentGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+  50%      { box-shadow: 0 0 26px -6px rgba(255, 59, 48, 0.6); }
+}
+/* YELLOW — moderate time */
+.urgency-yellow {
+  border-color: rgba(255, 178, 77, 0.6) !important;
+  box-shadow: 0 0 22px -8px rgba(255, 169, 77, 0.5);
+}
+/* GREEN — plenty of time */
+.urgency-green { border-color: rgba(52, 211, 153, 0.45) !important; }
+
+/* Animated grid for the hero */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 75%);
+}
+
+/* Promo banner sheen */
+.banner-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(28rem 18rem at 85% 50%, rgba(255, 138, 26, 0.22), transparent 60%);
+  pointer-events: none;
+}
