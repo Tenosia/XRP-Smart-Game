@@ -1,242 +1,171 @@
-# 🔮 MyIdea — Stake on what you know
+# MyIdea
 
-A full-stack **prediction-market entertainment platform** settled on the **Stellar** network in
-native **XLM**. Users float simple, knowable yes/no questions ("Will France beat Brazil on June
-25th?", "Will BTC close higher on June 27th?"), the crowd splits into two camps and stakes XLM, and
-when the outcome is known the pool is paid out automatically.
+MyIdea is a full-stack prediction-market platform settled on the Stellar network in native XLM. Anyone can pose a simple yes/no question whose answer will be obvious by a set date. The crowd splits into two sides and stakes XLM. When the outcome is known, the pool is paid out automatically and winners never lose their stake.
 
-| | |
-|---|---|
-| **Frontend** | React 18 + Vite + Tailwind CSS + Framer Motion |
-| **Backend** | Node.js + Express + better-sqlite3 |
-| **Blockchain** | Stellar (testnet by default), `stellar-sdk`, XLM |
-| **Auth** | Email + password, JWT |
+## At a glance
 
----
+| Area | Details |
+|------|---------|
+| Frontend | React 18, Vite, Tailwind CSS, Framer Motion, React Router |
+| Backend | Node.js, Express, SQLite (better-sqlite3), Zod validation |
+| Blockchain | Stellar via stellar-sdk, XLM only, testnet by default |
+| Auth | Email and password (bcrypt), JWT sessions valid for 7 days |
+| Bot protection | Cloudflare Turnstile, honeypot fields, rate limits, account flagging |
 
-## ✨ Features
+## How it works
 
-- **Idea marketplace** — paginated, searchable lobby; each idea shows **who created it**, the pool, backer count and a live countdown.
-- **Anyone can earn** — any user can become an idea owner (pay the listing fee) and earn 20% of every losing pool.
-- **Leaderboards** (`/rankings`) — top idea owners (by earnings), top ideas (by money raised), top users (by net winnings).
-- **Live wins ticker** — real-time feed of who just earned money (`/api/feed/wins`), on the lobby and landing.
-- **Hot ideas** + **sorting** — by newest, most funded, or most backers.
-- **Idea rule** — the answer must be *unpredictable now but obvious by the end date*; shown on Create with a required acknowledgement, enforced in review.
-- **Split visualisation** — a donut chart of the 70/20/5/5 payout split on Create & Whitepaper.
-- **Feedback** (`/feedback`) — users send feedback; admins read it in the console.
-- **Timezone-aware** closing time — shows your local zone + the exact UTC instant.
-- **Shareable idea links** — every idea page has a one-click **Copy link** for owners to market their idea.
-- **Owner promotion** — idea owners can attach optional **X / Telegram / Discord** links, shown on the idea page. Site-wide socials live in the footer (edit `frontend/src/lib/site.js`).
-- **Minimum stake** of 100 XLM (`MIN_STAKE_XLM`).
-- **Result after end date** — owners can submit the outcome only once the idea's end date has passed; the platform approves it to pay out.
-- **Bot protection** — a visible self-hosted **CAPTCHA** on sign-up (distorted SVG, verified statelessly via a short-lived signed token — no third-party service), plus hidden honeypot fields, per-IP/per-account velocity throttling, and account flagging.
-- **Whitepaper** (`/whitepaper`) and **FAQ** (`/faq`).
-- **Admin per-idea stats** — user count, Option A count, Option B count, and total fund for each idea.
+1. A user submits an idea: a question, two answer options, a funding deadline and an end time, and pays a listing fee.
+2. A project owner reviews it. Approval lists it publicly. Rejection refunds the fee.
+3. While the idea is open, users stake XLM on Option A or Option B. The split of money between the sides is the crowd's implied probability, shown live on the idea page.
+4. At the funding deadline staking closes automatically (checked every 15 seconds).
+5. After the end time, the idea owner submits the real-world result.
+6. A project owner approves it, and the pool settles instantly. If the result is rejected, the owner can resubmit with the admin's note. Admins can also resolve an idea directly.
 
-## 🎭 Roles
+The idea rule: the answer must be unpredictable now but objectively obvious by the end date, such as a match result or a closing price. Opinions and anything that might never resolve are rejected in review.
 
-- **Users** — sign up with email, get a personal Stellar deposit address, fund it, and stake on markets.
-- **Idea Owners** — any user who pays the listing fee and submits a market. They earn **20%** of every pool their market generates.
-- **Project Owners (admins)** — the operators. They review submissions, settle outcomes, and collect the **10%** platform cut.
+Idea statuses: pending, open, closed, resolved, refunded, rejected.
 
-## 💸 The economics — winners never lose
+## Roles
 
-When a market settles, **every winner gets their full stake back**. Only the **losers' pool** is
-redistributed:
+- **Visitors** can browse live ideas, idea pages, the whitepaper and the FAQ.
+- **Users** sign up, get a personal Stellar deposit address, fund it, stake on ideas, and withdraw.
+- **Idea owners** are any users who pay the listing fee and submit an idea. They earn 20% of the losing pool of every idea they create, and can attach optional X, Telegram and Discord links and a shareable link to promote it.
+- **Project owners (admins)** review submissions, approve or reject results, monitor users and money flow, and withdraw platform revenue. Their own ideas carry no listing fee.
 
-| Share of the **losers' pool** | Recipient | Basis points (env) |
-|------:|-----------|--------------------|
-| **70%** | Winning backers, pro-rata by stake (their profit) | `SPLIT_WINNERS_BPS` |
-| **20%** | The idea owner (creator) | `SPLIT_OWNER_BPS` |
-| **5%** | Development fund | `SPLIT_DEV_BPS` |
-| **5%** | Marketing fund | `SPLIT_MARKETING_BPS` |
+## Economics
 
-So each winner receives **`their stake` + `70% of losers' pool × (their stake ÷ total winning stake)`**.
-Only the losers lose money.
+When an idea settles, every winner gets their full stake back. Only the losing pool is redistributed:
 
-> **Example** — pool of 600 on the winning side, 400 on the losing side.
-> Losers' pool = 400 → winners share 280 (70%), owner 80 (20%), dev 20 (5%), marketing 20 (5%).
-> A winner who backed 60 (10% of the winning side) gets **60 back + 28 profit = 88**.
+| Share of the losing pool | Recipient |
+|-------------------------:|-----------|
+| 70% | Winning backers, pro-rata by stake (their profit) |
+| 20% | The idea owner |
+| 5% | Development fund (platform) |
+| 5% | Marketing fund (platform) |
 
-- A **listing fee** (default **1,000 XLM**, `IDEA_FEE_XLM`) is charged when a market is submitted. It is **kept by the platform on approval** and **refunded on rejection**.
-- If **nobody backed the winning side**, every stake is **refunded** in full.
-- If **there are no losers** (everyone picked the winning side), everyone simply gets their stake back.
-- All internal accounting is done in integer **stroops** (1 XLM = 10,000,000 stroops) so there is never floating-point drift; rounding dust is conserved into the pool.
+Example: 600 XLM on the winning side and 400 on the losing side. The losing pool of 400 pays 280 to winners, 80 to the owner, 20 to development and 20 to marketing. A winner who staked 60 (10% of the winning side) receives 60 back plus 28 profit, 88 in total.
 
-## 🔁 Market lifecycle
+- The listing fee (default 1,000 XLM) is kept by the platform on approval and refunded on rejection.
+- The minimum stake per bet is 100 XLM by default.
+- If nobody backed the winning side, every stake is refunded.
+- If there are no losers, everyone simply gets their stake back.
+- All balances are integer stroops (1 XLM = 10,000,000 stroops), so there is no floating-point drift. Rounding remainders are assigned deterministically so totals always balance exactly.
 
-```
- submit (pay fee)        admin approves           deadline passes        admin sets winner
-USER ───────────► pending ─────────────► open ───────────────► closed ───────────────► resolved
-                     │                     ▲                                               │
-                     │ admin rejects       │ users stake XLM                  pool paid 70/20/10
-                     ▼                     │                                               │
-                  rejected            (live odds)                   (no winners ⇒ refunded)
-                (fee refunded)
-```
+## Wallet and custody
 
-Open markets auto-close at their deadline (a 15s scheduler). Admins can also resolve early if the
-outcome is already known.
+MyIdea is custodial, like an exchange.
 
----
+- **Deposits:** each account has its own Stellar keypair. A poller checks for incoming payments every 20 seconds (users can also refresh on demand), credits the internal balance, and sweeps funds into the platform hot wallet, leaving a small reserve behind.
+- **Internal ledger:** staking, payouts and fees move balances inside the database, instantly and without fees. Every movement is recorded in a ledger shown in the user's history and in the admin money-flow view.
+- **Withdrawals:** paid on-chain from the hot wallet to any Stellar address. The balance is reserved first and restored if the transaction fails. Destinations that do not exist yet are created automatically.
+- **Key storage:** custodial secret keys are encrypted at rest with AES-256-GCM.
+- **Hot wallet:** on testnet it is generated and funded automatically on first start and saved to a git-ignored file. On mainnet a funded secret must be supplied, and the server refuses to start without it.
 
-## 🚀 Quick start
+## Pages
 
-**Prerequisites:** Node.js 18+ (tested on Node 22).
+- Home: live ideas ranked by money raised and number of backers, refreshing automatically.
+- Idea page: odds bar, countdown, backers per side, shareable link, owner result submission, and a live rankings panel (top idea owners, top ideas, top users).
+- Create idea: guided form with the idea rule acknowledgement, times shown in the local timezone with the exact UTC instant.
+- Wallet: balance, deposit address, withdrawals, transaction history.
+- Portfolio: your positions and the ideas you created.
+- Admin console: review queue, result resolution, users (with flagged accounts), money flow, treasury, and all ideas with per-option user counts and pool totals.
+- Whitepaper and FAQ.
 
-### 1. Backend
+## Abuse protection
+
+- Site-wide human check with Cloudflare Turnstile once per browser session, and again on sign-up.
+- Hidden honeypot fields on sign-up and idea creation.
+- Rate limits on the whole API, with a stricter limit on authentication, per-network sign-up limits, and velocity guards on creating ideas and staking.
+- Accounts that act faster than a human can are throttled and flagged for admin review.
+- The API binds to loopback only and is meant to sit behind a reverse proxy.
+
+## Getting started
+
+Requires Node.js 18 or newer.
+
+Backend:
 
 ```bash
 cd backend
 npm install
-cp .env.example .env          # a ready-to-run .env is already included for local dev
-npm run seed                  # optional: load demo markets + demo users
-npm start
+cp .env.example .env
+npm run seed      # optional: demo users and sample ideas (testnet only)
+npm start         # or: npm run dev for watch mode
 ```
 
-On first boot the server will, on **testnet**, automatically generate a **hot wallet** and fund it
-via Friendbot (printed once and saved to `backend/.hotwallet.json`). It also bootstraps the admin
-account from `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+On first start the server creates the database, bootstraps the admin account from the environment, and on testnet generates and funds the hot wallet. It listens on port 4000.
 
-The API listens on **http://localhost:4000**.
-
-### 2. Frontend
+Frontend:
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev       # development server on port 5173
+npm run build     # production build into dist
 ```
 
-Open **http://localhost:5173**. The Vite dev server proxies `/api` to the backend, so no CORS setup
-is needed in development.
+In development the Vite server proxies API requests to the backend, so no CORS setup is needed. In production, serve the built frontend and route API requests to the backend through a reverse proxy.
 
-### 3. Log in
+Utility: `node src/make-test-users.js [count] [balance] [password]` (run from backend) creates test users with a play-money balance. Like the seed script, it refuses to run on mainnet.
 
-| Account | Email | Password | Role |
-|---------|-------|----------|------|
-| Project Owner | `admin@predixo.app` | `changeme123` | admin |
-| Demo users (after `npm run seed`) | `alice@predixo.app`, `bob@predixo.app`, `carol@predixo.app`, `oracle@predixo.app` | `password123` | user |
+## Configuration
 
-The demo users start with a play-money balance so you can stake immediately. Real accounts start at
-0 and fund themselves by depositing XLM to their address.
+Set in `backend/.env`. See `backend/.env.example` for defaults and comments.
 
----
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| PORT | 4000 | Backend port |
+| CLIENT_ORIGIN | local frontend | Allowed CORS origins, comma-separated |
+| JWT_SECRET | placeholder | Session signing secret |
+| WALLET_ENCRYPTION_KEY | zeros | 64 hex characters used to encrypt custodial keys |
+| STELLAR_NETWORK | testnet | testnet or public |
+| HORIZON_URL | testnet Horizon | Horizon endpoint |
+| HOTWALLET_SECRET | empty | Hot wallet secret; auto-generated on testnet if blank, required on mainnet |
+| SPLIT_WINNERS_BPS, SPLIT_OWNER_BPS, SPLIT_DEV_BPS, SPLIT_MARKETING_BPS | 7000, 2000, 500, 500 | Losing-pool split in basis points, must sum to 10000 |
+| IDEA_FEE_XLM | 1000 | Listing fee |
+| MIN_STAKE_XLM | 100 | Minimum stake per bet |
+| MIN_WITHDRAW_XLM | 1 | Minimum withdrawal |
+| MAX_WITHDRAW_XLM | 0 | Per-transaction withdrawal cap, 0 means no cap |
+| ADMIN_EMAIL, ADMIN_PASSWORD | see .env.example | Bootstrap admin account |
+| TURNSTILE_SITE_KEY, TURNSTILE_SECRET | Cloudflare test keys | Human verification keys |
 
-## 🏦 How money moves (custodial model)
+The default Turnstile keys always pass, so they give no real protection. Replace them with real keys before going public. The site-wide social links shown in the footer are edited in `frontend/src/lib/site.js`.
 
-MyIdea is a **custodial** platform, the same model exchanges use:
-
-1. **Deposit** — every account gets a dedicated Stellar keypair. Send XLM to that address; a
-   poller (every 20s) detects incoming payments via Horizon and credits the user's internal balance.
-   Deposited funds are then **swept** into the platform hot wallet so withdrawals are always payable.
-2. **Internal ledger** — staking, payouts and fees all move balances inside the database (instant,
-   feeless). Every movement is recorded in the `ledger` table and shown in the user's history.
-3. **Withdraw** — paid on-chain from the hot wallet to any Stellar address (new accounts are created
-   automatically). The balance is reserved first and rolled back if the transaction fails.
-
-Custodial secret keys are encrypted at rest with **AES-256-GCM** (`WALLET_ENCRYPTION_KEY`).
-
----
-
-## 🔌 API reference
-
-All bodies are JSON. Authenticated routes require `Authorization: Bearer <token>`.
-
-### Auth
-| Method | Path | Body | Notes |
-|--------|------|------|-------|
-| POST | `/api/auth/register` | `{email, password, displayName?}` | returns `{token, user}`, generates deposit wallet |
-| POST | `/api/auth/login` | `{email, password}` | returns `{token, user}` |
-| GET | `/api/auth/me` | — | current user |
-
-### Wallet
-| Method | Path | Body |
-|--------|------|------|
-| GET | `/api/wallet` | — |
-| GET | `/api/wallet/transactions` | — |
-| POST | `/api/wallet/refresh` | — (on-demand deposit check) |
-| POST | `/api/wallet/withdraw` | `{destination, amount}` |
-
-### Markets
-| Method | Path | Body |
-|--------|------|------|
-| GET | `/api/ideas?status=open\|closed\|resolved` | — |
-| GET | `/api/ideas/:id` | — (includes activity feed) |
-| GET | `/api/ideas/mine` | — (created + positions) |
-| POST | `/api/ideas` | `{title, description, category, optionA, optionB, closesAt}` |
-| POST | `/api/ideas/:id/contribute` | `{option:'A'\|'B', amount}` |
-
-### Admin (project owners)
-| Method | Path | Body |
-|--------|------|------|
-| GET | `/api/admin/ideas?status=` | — |
-| GET | `/api/admin/stats` | — |
-| POST | `/api/admin/ideas/:id/approve` | — |
-| POST | `/api/admin/ideas/:id/reject` | `{reason?}` |
-| POST | `/api/admin/ideas/:id/resolve` | `{winningOption:'A'\|'B'}` |
-| POST | `/api/admin/withdraw` | `{destination, amount}` (platform revenue) |
-
-### Public
-`GET /api/health` · `GET /api/config` (network, fee, split)
-
----
-
-## ⚙️ Configuration (`backend/.env`)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `4000` | API port |
-| `CLIENT_ORIGIN` | `http://localhost:5173` | allowed CORS origin(s), comma-separated |
-| `JWT_SECRET` | — | session signing secret |
-| `WALLET_ENCRYPTION_KEY` | — | 64 hex chars (32 bytes) for encrypting custodial keys |
-| `STELLAR_NETWORK` | `testnet` | `testnet` or `public` (mainnet) |
-| `HORIZON_URL` | testnet Horizon | Horizon endpoint |
-| `HOTWALLET_SECRET` | — | hot-wallet secret; auto-generated+funded on testnet if blank |
-| `SPLIT_WINNERS_BPS` / `SPLIT_OWNER_BPS` / `SPLIT_DEV_BPS` / `SPLIT_MARKETING_BPS` | `7000/2000/500/500` | must sum to `10000` |
-| `IDEA_FEE_XLM` | `1000` | idea listing fee |
-| `MIN_WITHDRAW_XLM` | `1` | minimum withdrawal |
-| `MIN_STAKE_XLM` | `100` | minimum stake per bet |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `admin@predixo.app` / `changeme123` | bootstrap admin |
-
----
-
-## 🛡️ Going to mainnet — checklist
-
-This is a complete, working reference implementation. Before handling real money:
-
-- [ ] Set `STELLAR_NETWORK=public`, a real `HORIZON_URL`, and a properly secured `HOTWALLET_SECRET` (cold/hot split, multisig).
-- [ ] Generate strong, unique `JWT_SECRET` and `WALLET_ENCRYPTION_KEY`; store them in a secrets manager, **not** in `.env`.
-- [ ] Move custodial key storage to an HSM/KMS; the current AES-256-GCM-at-rest is a starting point, not a vault.
-- [ ] Add deposit confirmation thresholds, withdrawal limits/approvals, and KYC/AML as your jurisdiction requires.
-- [ ] Swap SQLite for Postgres for concurrency/durability at scale.
-- [ ] Add a robust resolution/oracle process (and dispute handling) instead of single-admin resolution.
-- [ ] **Legal**: prediction markets / wagering are regulated in most jurisdictions. Obtain the appropriate licensing and legal review before operating with real funds.
-
-## 📁 Project structure
+## Project structure
 
 ```
-predixo/
-├── backend/
-│   └── src/
-│       ├── index.js            # Express app + bootstrap (admin, hot wallet, schedulers)
-│       ├── config.js           # env + economic constants
-│       ├── db.js               # SQLite schema + ledger helpers
-│       ├── money.js            # stroop math, bps splits, pro-rata
-│       ├── crypto.js           # AES-256-GCM for custodial keys
-│       ├── stellar.js          # Horizon client, keypairs, deposits, sends, sweeps
-│       ├── auth.js             # JWT + middleware + user serializer
-│       ├── seed.js             # demo data
-│       ├── routes/             # auth, wallet, ideas, admin
-│       └── services/           # markets (resolve/payout), deposits, scheduler
-└── frontend/
-    └── src/
-        ├── pages/              # Landing, Login, Register, Markets, IdeaDetail, CreateIdea, Wallet, Portfolio, Admin
-        ├── components/         # Navbar, IdeaCard, OddsBar, Countdown, StatusBadge, …
-        ├── context/            # Auth + Toast providers
-        └── lib/                # api client, formatters
+myidea/
+  backend/
+    src/
+      index.js        Express app, bootstrap, schedulers
+      config.js       Environment and economic constants
+      db.js           SQLite schema, migrations, ledger helpers
+      money.js        Stroop math, basis-point splits, pro-rata
+      crypto.js       AES-256-GCM for custodial keys
+      stellar.js      Horizon client, deposits, sends, sweeps, hot wallet
+      auth.js         JWT and access middleware
+      seed.js         Demo data
+      make-test-users.js
+      routes/         auth, wallet, ideas, admin, rankings, feed
+      services/       markets (settlement), deposits, scheduler, botGuard, turnstile
+  frontend/
+    src/
+      pages/          Landing, IdeaDetail, CreateIdea, Wallet, Portfolio, Admin,
+                      Login, Register, Whitepaper, FAQ
+      components/     Layout, Navbar, IdeaCard, OddsBar, HumanGate, and others
+      context/        Auth and toast providers
+      lib/            API client, formatters, site settings
 ```
 
----
+## Before going to mainnet
 
-*Built on Stellar. Play responsibly.*
+This is a working reference implementation. Before handling real money:
+
+- Set the network to public, use a real Horizon endpoint, and secure the hot wallet (cold/hot split, multisig).
+- Generate strong, unique values for the JWT secret and wallet encryption key, and keep them in a secrets manager rather than a file.
+- Move custodial key storage to an HSM or KMS. AES-256-GCM at rest is a starting point, not a vault.
+- Change the default admin credentials and install real Turnstile keys.
+- Add deposit confirmation thresholds, withdrawal limits and approvals, and KYC/AML as your jurisdiction requires.
+- Replace SQLite with Postgres for concurrency and durability at scale.
+- Replace single-admin resolution with a robust oracle and dispute process.
+- Legal: prediction markets and wagering are regulated in most jurisdictions. Obtain licensing and legal review before operating with real funds.
